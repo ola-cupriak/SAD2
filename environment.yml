@@ -1,0 +1,17 @@
+name: <project_1_sad2>
+channels:
+  - defaults
+  - bioconda
+  - conda-forge
+  - pytorch
+dependencies:
+ - anndata=0.8.0=pyhd8ed1ab_1
+ - ipykernel=6.17.1=pyh210e3f2_0
+ - matplotlib=3.5.3=py39hf3d152e_2
+ - numpy=1.22.3=py39hc58783e_2
+ - pandas=1.5.1=py39h417a72b_0
+ - pytorch=1.13.0=py3.9_cpu_0
+ - scanpy=1.7.2=pyhdfd78af_0
+ - scikit-learn=1.0.2=py39h4dfa638_0
+ - torchaudio=0.13.0=py39_cpu
+ - torchvision=0.14.0=py39_cpu
