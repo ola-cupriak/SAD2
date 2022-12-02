@@ -24,12 +24,12 @@ def read_cmd() -> tuple:
     train_set = args.train_dataset
     test_set = args.test_dataset
     # Checks the correctness of the passed arguments
-    if not os.path.exists(train_set):
-        sys.stderr(print('ERROR: Incorrect path for the file containing the train dataset.'))
-        sys.ecit(0)
-    if not os.path.exists(test_set):
-        sys.stderr(print('ERROR: Incorrect path for the file containing the test dataset.'))
-        sys.ecit(0)
+    # if not os.path.exists(train_set):
+    #     sys.stderr(print('ERROR: Incorrect path for the file containing the train dataset.'))
+    #     sys.ecit(0)
+    # if not os.path.exists(test_set):
+    #     sys.stderr(print('ERROR: Incorrect path for the file containing the test dataset.'))
+    #     sys.ecit(0)
 
     datasets = {'train dataset': train_set, 'test dataset': test_set}
     
@@ -110,23 +110,26 @@ def plot_histogram(data_dict: dict, output_hists: str, output_stats: str,
 
     axes[0,0].hist(data_X_train, bins=bins_prepro, ec=ec, fc=fc, alpha=alpha)
     axes[0,0].set_title('preprocessed train data')
-    axes[0,0].set_xlabel('preprocessed counts')
+    axes[0,0].set_xlabel('data values')
     axes[0,0].set_ylabel('frequency')
+
 
     axes[0,1].hist(data_raw_train, bins=bins_raw, ec=ec, fc=fc, alpha=alpha)
     axes[0,1].set_title('raw train data')
-    axes[0,1].set_xlabel('raw counts')
+    axes[0,1].set_xlabel('data values')
     axes[0,1].set_ylabel('frequency')
+    axes[0,1].set_xticks(bins_raw)
 
     axes[1,0].hist(data_X_test, bins=bins_prepro, ec=ec, fc=fc, alpha=alpha)
     axes[1,0].set_title('preprocessed test data')
-    axes[1,0].set_xlabel('preprocessed counts')
+    axes[1,0].set_xlabel('data values')
     axes[1,0].set_ylabel('frequency')
 
     axes[1,1].hist(data_raw_test, bins=bins_raw, ec=ec, fc=fc, alpha=alpha)
     axes[1,1].set_title('raw test data')
-    axes[1,1].set_xlabel('raw counts')
+    axes[1,1].set_xlabel('data values')
     axes[1,1].set_ylabel('frequency')
+    axes[1,1].set_xticks(bins_raw)
 
     plt.savefig(output_hists, bbox_inches='tight')
 
@@ -153,17 +156,20 @@ def get_obs_info(data_dict: dict, output: str):
 
 
 if __name__ == '__main__':
-    datasets = read_cmd()
+    #datasets = read_cmd()
+    datasets = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
     datasets['train dataset'] = load_dataset(datasets['train dataset'])
     datasets['test dataset'] = load_dataset(datasets['test dataset'])
     create_shape_table(datasets, 'results/shape_table.csv')
     # Generate histograms
-    bins_prepro = np.arange(0, 10.5, 0.5)
-    bins_raw = np.arange(0, 11, 1)
+    bins_prepro_0 = np.arange(0, 10.5, 0.1)
+    bins_raw_0 = np.arange(0, 11, 1)
+    bins_prepro = np.arange(0, 20.5, 0.1)
+    bins_raw = np.arange(0, 21, 1)
     plot_histogram(datasets, 'results/hists_with_zeros.png', 
                     'results/stats_with_zeros.csv', True,
+                    bins_prepro_0, bins_raw_0)
+    plot_histogram(datasets, 'results/hists_without_zeros.png', 
+                    'results/stats_without_zeros.csv', False,
                     bins_prepro, bins_raw)
-    # plot_histogram(datasets, 'results/hists_without_zeros.png', 
-    #                 'results/stats_without_zeros.csv', False,
-    #                 bins_prepro, bins_raw)
     get_obs_info(datasets, 'results/info_table.csv')
