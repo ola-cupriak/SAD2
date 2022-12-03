@@ -162,7 +162,7 @@ if __name__ == '__main__':
     datasets['test dataset'] = load_dataset(datasets['test dataset'])
     create_shape_table(datasets, 'results/shape_table.csv')
     # Generate histograms
-    bins_prepro_0 = np.arange(0, 10.5, 0.1)
+    bins_prepro_0 = np.arange(0, 10.5, 0.5)
     bins_raw_0 = np.arange(0, 11, 1)
     bins_prepro = np.arange(0, 20.5, 0.1)
     bins_raw = np.arange(0, 21, 1)
