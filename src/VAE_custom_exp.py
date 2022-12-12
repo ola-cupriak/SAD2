@@ -214,69 +214,69 @@ def run_VAE_training(train_data: str, test_data: str, beta: float,
             test_elbo_list, test_Dkl_list, test_recon_loss_list, z)
 
 
-def get_color_dict(path: str, 
-                    colors = ['black', 'darkgray', 'rosybrown', 
-                            'lightcoral', 'darkred', 'red', 'tan', 
-                            'lightsalmon', 'sienna', 'sandybrown', 
-                            'peru', 'darkorange', 'gold', 'olive',
-                            'darkkhaki', 'yellow', 'forestgreen', 
-                            'greenyellow', 'lightgreen', 'lime', 
-                            'turquoise', 'teal', 'aqua', 'blue', 
-                            'cadetblue', 'deepskyblue', 'steelblue', 
-                            'dodgerblue', 'lightsteelblue', 'navy', 
-                            'slateblue', 'mediumpurple', 'fuchsia',
-                            'rebeccapurple', 'indigo', 'darkviolet',
-                            'mediumorchid', 'plum' , 'lightgray', 
-                            'mediumvioletred', 'deeppink', 'hotpink',
-                            'palevioletred', 'lightpink', 'purple']):
-    df = sc.read_h5ad(path)
-    cell_types = list(np.unique(df.obs['cell_type']))
-    color_dict = {key: color for key, color in zip(cell_types, colors)}
-    return color_dict
+# def get_color_dict(path: str, 
+#                     colors = ['black', 'darkgray', 'rosybrown', 
+#                             'lightcoral', 'darkred', 'red', 'tan', 
+#                             'lightsalmon', 'sienna', 'sandybrown', 
+#                             'peru', 'darkorange', 'gold', 'olive',
+#                             'darkkhaki', 'yellow', 'forestgreen', 
+#                             'greenyellow', 'lightgreen', 'lime', 
+#                             'turquoise', 'teal', 'aqua', 'blue', 
+#                             'cadetblue', 'deepskyblue', 'steelblue', 
+#                             'dodgerblue', 'lightsteelblue', 'navy', 
+#                             'slateblue', 'mediumpurple', 'fuchsia',
+#                             'rebeccapurple', 'indigo', 'darkviolet',
+#                             'mediumorchid', 'plum' , 'lightgray', 
+#                             'mediumvioletred', 'deeppink', 'hotpink',
+#                             'palevioletred', 'lightpink', 'purple']):
+#     df = sc.read_h5ad(path)
+#     cell_types = list(np.unique(df.obs['cell_type']))
+#     color_dict = {key: color for key, color in zip(cell_types, colors)}
+#     return color_dict
 
 
-def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
-    """
-    Plots the latent space in 2D using PCA.
-    Saves the plot.
-    Saves a txt file with information on the number of 
-    principal components explaining 95% of the variance and returns it.
-    """
-    # PCA
-    latent_space = pd.DataFrame(z)
-    pca = decomposition.PCA()
-    latent_space_std_reg = StandardScaler(
-                            ).fit_transform(latent_space.iloc[:,0:ldim])
-    pca_res = pca.fit_transform(latent_space_std_reg)
-    pca_res = pd.DataFrame(pca_res, columns=[f'S{i}' 
-                                    for i in range(1,len(pca_res[0])+1)])
-    pca_res['cell_type'] = latent_space.iloc[:,ldim]
-    # Plot
-    cell_types = set(pca_res['cell_type'])
-    group = pca_res['cell_type']
+# def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
+#     """
+#     Plots the latent space in 2D using PCA.
+#     Saves the plot.
+#     Saves a txt file with information on the number of 
+#     principal components explaining 95% of the variance and returns it.
+#     """
+#     # PCA
+#     latent_space = pd.DataFrame(z)
+#     pca = decomposition.PCA()
+#     latent_space_std_reg = StandardScaler(
+#                             ).fit_transform(latent_space.iloc[:,0:ldim])
+#     pca_res = pca.fit_transform(latent_space_std_reg)
+#     pca_res = pd.DataFrame(pca_res, columns=[f'S{i}' 
+#                                     for i in range(1,len(pca_res[0])+1)])
+#     pca_res['cell_type'] = latent_space.iloc[:,ldim]
+#     # Plot
+#     cell_types = set(pca_res['cell_type'])
+#     group = pca_res['cell_type']
 
-    fig, ax = plt.subplots(figsize=(10,10))
-    for g in np.unique(group):
-        ix = np.where(group == g)[0].tolist()
-        ax.scatter(pca_res['S1'][ix],  pca_res['S2'][ix], 
-                    c = colors[g],  label = g, s = 10, alpha=0.7)
-    ax.legend(fontsize=5)
-    ax.set_title(f'PCA results for ldim={ldim} by cell type')
-    plt.savefig(path+'_PCA.png', bbox_inches='tight')
+#     fig, ax = plt.subplots(figsize=(10,10))
+#     for g in np.unique(group):
+#         ix = np.where(group == g)[0].tolist()
+#         ax.scatter(pca_res['S1'][ix],  pca_res['S2'][ix], 
+#                     c = colors[g],  label = g, s = 10, alpha=0.7)
+#     ax.legend(fontsize=5)
+#     ax.set_title(f'PCA results for ldim={ldim} by cell type')
+#     plt.savefig(path+'_PCA.png', bbox_inches='tight')
 
-    exp_var_pca = pca.explained_variance_ratio_
-    var = 0
-    i = 0
-    for e in exp_var_pca:
-        i += 1
-        if var>0.95:
-            break
-        var += e
+#     exp_var_pca = pca.explained_variance_ratio_
+#     var = 0
+#     i = 0
+#     for e in exp_var_pca:
+#         i += 1
+#         if var>0.95:
+#             break
+#         var += e
 
-    with open(path+'_PCA.txt', 'w') as f:
-        f.write(f'Number of components explaining 95% of variance: {i}\n')
+#     with open(path+'_PCA.txt', 'w') as f:
+#         f.write(f'Number of components explaining 95% of variance: {i}\n')
     
-    return i
+#     return i
 
 if __name__ == '__main__':
     (train_data, test_data, output, epochs, 
@@ -299,5 +299,5 @@ if __name__ == '__main__':
                 epochs, output)
 
 
-    color_dict = get_color_dict(test_data)
-    plot_PCA_latent_space(z, output, latent_dim, color_dict)
+    # color_dict = get_color_dict(test_data)
+    # plot_PCA_latent_space(z, output, latent_dim, color_dict)
