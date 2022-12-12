@@ -6,6 +6,14 @@ import pandas as pd
 import scanpy as sc
 import sys
 import os
+from utils import create_dataloader, test
+from VAE_custom_exp import VariationalAutoencoder_custom
+from VAE_custom_exp import EncoderNN_custom, DecoderNN_custom
+from VAE_custom_exp import EncoderGaussian_custom, DecoderGaussian_custom
+from VAE_Vanilla import VariationalAutoencoder
+from VAE_Vanilla import EncoderGaussian, DecoderGaussian
+from VAE_Vanilla import EncoderNN, DecoderNN
+
 
 def read_cmd() -> tuple:
     """
@@ -20,20 +28,25 @@ def read_cmd() -> tuple:
     parser.add_argument('-v', '--test_dataset',
                         help='path to test dataset', 
                         type=str, required=True)
-    args = parser.parse_args()
+    parser.add_argument('-m', '--models', 
+                        help='list of models to be evaluated',
+                        type=str, nargs='+', required=True)
     train_set = args.train_dataset
     test_set = args.test_dataset
+    models = args.models
     # Checks the correctness of the passed arguments
-    # if not os.path.exists(train_set):
-    #     sys.stderr(print('ERROR: Incorrect path for the file containing the train dataset.'))
-    #     sys.ecit(0)
-    # if not os.path.exists(test_set):
-    #     sys.stderr(print('ERROR: Incorrect path for the file containing the test dataset.'))
-    #     sys.ecit(0)
+    if not os.path.exists(train_set):
+        sys.stderr(print('ERROR: Incorrect path for \
+            the file containing the train dataset.'))
+        sys.exit(0)
+    if not os.path.exists(test_set):
+        sys.stderr(print('ERROR: Incorrect path for \
+            the file containing the test dataset.'))
+        sys.exit(0)
 
     datasets = {'train dataset': train_set, 'test dataset': test_set}
     
-    return datasets
+    return datasets, models
 
 
 def load_dataset(path: str) -> sc.AnnData:
@@ -155,21 +168,103 @@ def get_obs_info(data_dict: dict, output: str):
     summary.to_csv(output)
 
 
+def get_color_dict(path: str, 
+                    colors = ['black', 'darkgray', 'rosybrown', 
+                            'lightcoral', 'darkred', 'red', 'tan', 
+                            'lightsalmon', 'sienna', 'sandybrown', 
+                            'peru', 'darkorange', 'gold', 'olive',
+                            'darkkhaki', 'yellow', 'forestgreen', 
+                            'greenyellow', 'lightgreen', 'lime', 
+                            'turquoise', 'teal', 'aqua', 'blue', 
+                            'cadetblue', 'deepskyblue', 'steelblue', 
+                            'dodgerblue', 'lightsteelblue', 'navy', 
+                            'slateblue', 'mediumpurple', 'fuchsia',
+                            'rebeccapurple', 'indigo', 'darkviolet',
+                            'mediumorchid', 'plum' , 'lightgray', 
+                            'mediumvioletred', 'deeppink', 'hotpink',
+                            'palevioletred', 'lightpink', 'purple']):
+    df = sc.read_h5ad(path)
+    cell_types = list(np.unique(df.obs['cell_type']))
+    color_dict = {key: color for key, color in zip(cell_types, colors)}
+    return color_dict
+
+
+def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
+    """
+    Plots the latent space in 2D using PCA.
+    Saves the plot.
+    Saves a txt file with information on the number of 
+    principal components explaining 95% of the variance and returns it.
+    """
+    # PCA
+    latent_space = pd.DataFrame(z)
+    pca = decomposition.PCA()
+    latent_space_std_reg = StandardScaler(
+                            ).fit_transform(latent_space.iloc[:,0:ldim])
+    pca_res = pca.fit_transform(latent_space_std_reg)
+    pca_res = pd.DataFrame(pca_res, columns=[f'S{i}' 
+                                    for i in range(1,len(pca_res[0])+1)])
+    pca_res['cell_type'] = latent_space.iloc[:,ldim]
+    # Plot
+    cell_types = set(pca_res['cell_type'])
+    group = pca_res['cell_type']
+
+    fig, ax = plt.subplots(figsize=(10,10))
+    for g in np.unique(group):
+        ix = np.where(group == g)[0].tolist()
+        ax.scatter(pca_res['S1'][ix],  pca_res['S2'][ix], 
+                    c = colors[g],  label = g, s = 10, alpha=0.7)
+    ax.legend(fontsize=5)
+    ax.set_title(f'PCA results for ldim={ldim} by cell type')
+    plt.savefig(path+'_PCA.png', bbox_inches='tight')
+
+    exp_var_pca = pca.explained_variance_ratio_
+    var = 0
+    i = 0
+    for e in exp_var_pca:
+        i += 1
+        if var>0.95:
+            break
+        var += e
+
+    with open(path+'_PCA.txt', 'w') as f:
+        f.write(f'Number of components explaining 95% of variance: {i}\n')
+    
+    return i
+
+
 if __name__ == '__main__':
-    #datasets = read_cmd()
-    datasets = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
+    datasets, models = read_cmd()
+    #datasets = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
     datasets['train dataset'] = load_dataset(datasets['train dataset'])
     datasets['test dataset'] = load_dataset(datasets['test dataset'])
-    create_shape_table(datasets, 'results/shape_table.csv')
+    create_shape_table(datasets, 'res/shape_table.csv')
     # Generate histograms
     bins_prepro_0 = np.arange(0, 10.5, 0.5)
     bins_raw_0 = np.arange(0, 11, 1)
-    bins_prepro = np.arange(0, 20.5, 0.1)
+    bins_prepro = np.arange(0, 20.5, 0.5)
     bins_raw = np.arange(0, 21, 1)
-    plot_histogram(datasets, 'results/hists_with_zeros.png', 
-                    'results/stats_with_zeros.csv', True,
+    plot_histogram(datasets, 'res/hists_with_zeros.png', 
+                    'res/stats_with_zeros.csv', True,
                     bins_prepro_0, bins_raw_0)
-    plot_histogram(datasets, 'results/hists_without_zeros.png', 
-                    'results/stats_without_zeros.csv', False,
+    plot_histogram(datasets, 'res/hists_without_zeros.png', 
+                    'res/stats_without_zeros.csv', False,
                     bins_prepro, bins_raw)
-    get_obs_info(datasets, 'results/info_table.csv')
+    get_obs_info(datasets, 'res/info_table.csv')
+
+    # Generate latent spaces on the test dataset for each model
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    color_dict = get_color_dict(datasets['test dataset'])
+    
+    for model in models:
+        vae = torch.load(model)
+        vae.eval()
+        batch_size = int(model.split('bs')[1].split('_')[0])
+        sample = float(model.split('s')[1].split('_')[0])
+        ldim = model.encoder.encoder.linear3.out_features
+        dataloader = create_dataloader(datasets['test dataset'], batch_size, sample, device)
+        elbo, Dkl, recon_loss, z = test(vae, dataloader, True, device)
+        pca_res = plot_PCA_latent_space(z, model, ldim, color_dict)
+        stats = [elbo, Dkl, recon_loss, pca_res]
+        stats = pd.DataFrame(stats, columns=['-ELBO', 'Dkl', 'Recon', 'PCA'])
+        stats.to_csv(model+'_stats.csv', index=False)
