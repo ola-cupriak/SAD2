@@ -172,7 +172,7 @@ def get_obs_info(data_dict: dict, output: str):
     summary.to_csv(output)
 
 
-def get_color_dict(df, 
+def get_color_dict(path: str, feature_name: str,
                     colors = ['black', 'darkgray', 'rosybrown', 
                             'lightcoral', 'darkred', 'red', 'tan', 
                             'lightsalmon', 'sienna', 'sandybrown', 
@@ -187,18 +187,34 @@ def get_color_dict(df,
                             'mediumorchid', 'plum' , 'lightgray', 
                             'mediumvioletred', 'deeppink', 'hotpink',
                             'palevioletred', 'lightpink', 'purple']):
-    cell_types = list(np.unique(df.obs['cell_type']))
-    color_dict = {key: color for key, color in zip(cell_types, colors)}
+    
+    if feature_name not in ['cell_type', 'batch', 'DonorID', 'Site']:
+        sys.stderr = print('ERROR: Feature must be one of the following:\
+                            cell_type, batch, DonorID, Site.')
+        sys.exit(0)
+
+    df = sc.read_h5ad(path)
+    feature = list(np.unique(df.obs[feature_name]))
+    color_dict = {key: color for key, color in zip(feature, colors)}
     return color_dict
 
 
-def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
+def plot_PCA_latent_space(z, path: str, ldim: int, 
+                        colors: dict, feature_name: str):
     """
     Plots the latent space in 2D using PCA.
     Saves the plot.
     Saves a txt file with information on the number of 
     principal components explaining 95% of the variance and returns it.
     """
+    if feature_name == 'cell_type':
+        k = -4
+    elif feature_name == 'batch':
+        k = -3
+    elif feature_name == 'DonorID':
+        k = -2
+    elif feature_name == 'Site':
+        k = -1
     # PCA
     latent_space = pd.DataFrame(z)
     pca = decomposition.PCA()
@@ -207,19 +223,24 @@ def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
     pca_res = pca.fit_transform(latent_space_std_reg)
     pca_res = pd.DataFrame(pca_res, columns=[f'S{i}' 
                                     for i in range(1,len(pca_res[0])+1)])
-    pca_res['cell_type'] = latent_space.iloc[:,ldim]
+    pca_res[feature_name] = latent_space.iloc[:,k]
     # Plot
-    cell_types = set(pca_res['cell_type'])
-    group = pca_res['cell_type']
+    feature = set(pca_res[feature_name])
+    group = pca_res[feature_name]
 
     fig, ax = plt.subplots(figsize=(10,10))
     for g in np.unique(group):
+        if feature_name == 'DonorID':
+            g = int(g)
         ix = np.where(group == g)[0].tolist()
         ax.scatter(pca_res['S1'][ix],  pca_res['S2'][ix], 
                     c = colors[g],  label = g, s = 10, alpha=0.7)
-    ax.legend(fontsize=5)
-    ax.set_title(f'PCA results for ldim={ldim} by cell type')
-    plt.savefig(path+'_PCA.png', bbox_inches='tight')
+    if feature_name == 'cell_type':
+        ax.legend(fontsize=5)
+    else:
+        ax.legend()
+    ax.set_title(f'PCA results for ldim={ldim} by {feature_name}')
+    plt.savefig(path+f'_PCA_{feature_name}.png', bbox_inches='tight')
 
     exp_var_pca = pca.explained_variance_ratio_
     var = 0
@@ -230,8 +251,6 @@ def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
             break
         var += e
 
-    with open(path+'_PCAAAA.txt', 'w') as f:
-        f.write(f'Number of components explaining 95% of variance: {i}\n')
     
     return i
 
@@ -239,7 +258,7 @@ def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
 if __name__ == '__main__':
     #datasets, models = read_cmd()
     datasets_paths = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
-    models = ['res/vae_vanilla/vae_van_s1.0_b1.0_lr0.01_ld50_hd250_bs32_epo20.pt']
+    models = ['res/vae_vanilla/vae_vanilla_s1.0_b1.0_lr0.0005_ld50_hd250_bs32_epo20.pt']
     datasets = {}
     datasets['train dataset'] = load_dataset(datasets_paths['train dataset'])
     datasets['test dataset'] = load_dataset(datasets_paths['test dataset'])
@@ -259,8 +278,10 @@ if __name__ == '__main__':
 
     # Generate latent spaces on the test dataset for each model
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    color_dict = get_color_dict(datasets['test dataset'])
-    
+    features = ['cell_type', 'batch', 'DonorID', 'Site']
+    color_dicts = {f: get_color_dict(datasets_paths['test dataset'], f) 
+                    for f in features}
+
     for model in models:
         vae = torch.load(model)
         vae.eval()
@@ -269,10 +290,18 @@ if __name__ == '__main__':
         ldim = vae.encoder.encoder.linear3.out_features
         model = model.split('.')[:-1]
         model = '.'.join(model)
-        dataloader = create_dataloader(datasets_paths['test dataset'], batch_size, sample, 
+        print(model)
+        dataloader = create_dataloader(datasets_paths['test dataset'], 
+                                        batch_size, sample, 
                                         transform=torch.from_numpy)
-        elbo, Dkl, recon_loss, z = test(vae, dataloader, True, device)
-        pca_res = plot_PCA_latent_space(z, model, ldim, color_dict)
-        stats = [[float(elbo.cpu()), float(Dkl.cpu()), float(recon_loss.cpu()), pca_res]]
-        stats = pd.DataFrame(stats, columns=['-ELBO', 'Dkl', 'Recon', 'PCA'])
-        stats.to_csv(model+'_stats.csv', index=False)
+        elbo, Dkl, recon, z = test(vae, dataloader, True, device)
+        # Plot latent space for each feature
+        stats = [float(elbo.cpu()), float(Dkl.cpu()), float(recon.cpu())]
+        for f in features:
+            pca = plot_PCA_latent_space(z, model, ldim, color_dicts[f], f)
+            stats.append(pca)
+        stats = [stats]
+        stats = pd.DataFrame(stats, columns=['-ELBO', 'Dkl', 'Recon', 
+                                            'PCA_cell_type', 'PCA_batch', 
+                                            'PCA_DonorID', 'PCA_Site'])
+        stats.to_csv(model+f'_stats.csv', index=False)
