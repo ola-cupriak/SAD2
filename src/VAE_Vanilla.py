@@ -131,10 +131,7 @@ class VariationalAutoencoder(nn.Module):
         Dkl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
         return Dkl
 
-    def sample(self, 
-            mean, 
-            log_variance
-            ):
+    def sample(self,  mean, log_variance):
         """
         Samples from normal distribution with parameters from decoder.
         Returns vector of x predictions.

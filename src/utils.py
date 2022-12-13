@@ -90,7 +90,7 @@ def train(model, dataloader, optimizer, device='cpu') -> tuple:
     size = len(dataloader.dataset)
     num_batches = len(dataloader)
 
-    for batch, (X, _) in enumerate(dataloader):
+    for batch, (X, _, _, _, _) in enumerate(dataloader):
         X = X.to(device)
         elbo, Dkl, recon_loss, _ = model(X)
         # Backpropagation
@@ -125,12 +125,12 @@ def test(model, dataloader, last_epoch: bool, device='cpu') -> tuple:
     z_full = None
 
     with torch.no_grad():
-        for batch, (X, cell_type) in enumerate(dataloader):
+        for batch, (X, cell_type, s_batch, donorID, site) in enumerate(dataloader):
             X = X.to(device)
             elbo, Dkl, recon_loss, z = model(X)
             if last_epoch:
                 z = z.cpu().detach().numpy()
-                z = np.c_[z, cell_type]
+                z = np.c_[z, cell_type, s_batch, donorID, site]
                 if batch == 0:
                     z_full = z
                 else:
@@ -138,7 +138,6 @@ def test(model, dataloader, last_epoch: bool, device='cpu') -> tuple:
             test_elbo += elbo
             test_Dkl += Dkl
             test_recon_loss += recon_loss
-    
     return (test_elbo/num_batches, 
             test_Dkl/num_batches, 
             test_recon_loss/num_batches, 
@@ -156,6 +155,9 @@ class scRNADataset(Dataset):
     def __init__(self, h5ad_file: str, sample: float, transform=None):
         self.data = sc.read_h5ad(h5ad_file)
         self.cell_type = np.array(self.data.obs.cell_type)
+        self.batch = np.array(self.data.obs.batch)
+        self.DonorID = np.array(self.data.obs.DonorID)
+        self.Site = np.array(self.data.obs.Site)
         self.data = self.data.layers['counts'].toarray()
         l_cells = round(len(self.data) * sample)
         self.data = self.data[:l_cells]
@@ -170,11 +172,15 @@ class scRNADataset(Dataset):
             idx = idx.tolist()
         single_cell = self.data[idx]
         single_cell_type = self.cell_type[idx]
+        single_batch = self.batch[idx]
+        single_DonorID = self.DonorID[idx]
+        single_Site = self.Site[idx]
 
         if self.transform:
             single_cell = self.transform(single_cell)
+    
 
-        return single_cell, single_cell_type
+        return single_cell, single_cell_type, single_batch, single_DonorID, single_Site
 
 
 def create_dataloader(file: str, batch_size: int,
@@ -240,4 +246,3 @@ def plot_losses(train_elbo_list: list, train_Dkl_list: list,
     axes[2].legend()
     
     plt.savefig(output+'.png', bbox_inches='tight')
-

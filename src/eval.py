@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from sklearn import decomposition
+from sklearn.preprocessing import StandardScaler
 import sys
 import os
+import torch
 from utils import create_dataloader, test
 from VAE_custom_exp import VariationalAutoencoder_custom
 from VAE_custom_exp import EncoderNN_custom, DecoderNN_custom
@@ -13,6 +16,7 @@ from VAE_custom_exp import EncoderGaussian_custom, DecoderGaussian_custom
 from VAE_Vanilla import VariationalAutoencoder
 from VAE_Vanilla import EncoderGaussian, DecoderGaussian
 from VAE_Vanilla import EncoderNN, DecoderNN
+
 
 
 def read_cmd() -> tuple:
@@ -168,7 +172,7 @@ def get_obs_info(data_dict: dict, output: str):
     summary.to_csv(output)
 
 
-def get_color_dict(path: str, 
+def get_color_dict(df, 
                     colors = ['black', 'darkgray', 'rosybrown', 
                             'lightcoral', 'darkred', 'red', 'tan', 
                             'lightsalmon', 'sienna', 'sandybrown', 
@@ -183,7 +187,6 @@ def get_color_dict(path: str,
                             'mediumorchid', 'plum' , 'lightgray', 
                             'mediumvioletred', 'deeppink', 'hotpink',
                             'palevioletred', 'lightpink', 'purple']):
-    df = sc.read_h5ad(path)
     cell_types = list(np.unique(df.obs['cell_type']))
     color_dict = {key: color for key, color in zip(cell_types, colors)}
     return color_dict
@@ -227,30 +230,32 @@ def plot_PCA_latent_space(z, path: str, ldim: int, colors: dict):
             break
         var += e
 
-    with open(path+'_PCA.txt', 'w') as f:
+    with open(path+'_PCAAAA.txt', 'w') as f:
         f.write(f'Number of components explaining 95% of variance: {i}\n')
     
     return i
 
 
 if __name__ == '__main__':
-    datasets, models = read_cmd()
-    #datasets = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
-    datasets['train dataset'] = load_dataset(datasets['train dataset'])
-    datasets['test dataset'] = load_dataset(datasets['test dataset'])
+    #datasets, models = read_cmd()
+    datasets_paths = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
+    models = ['res/vae_vanilla/vae_van_s1.0_b1.0_lr0.01_ld50_hd250_bs32_epo20.pt']
+    datasets = {}
+    datasets['train dataset'] = load_dataset(datasets_paths['train dataset'])
+    datasets['test dataset'] = load_dataset(datasets_paths['test dataset'])
     create_shape_table(datasets, 'res/shape_table.csv')
-    # Generate histograms
-    bins_prepro_0 = np.arange(0, 10.5, 0.5)
-    bins_raw_0 = np.arange(0, 11, 1)
-    bins_prepro = np.arange(0, 20.5, 0.5)
-    bins_raw = np.arange(0, 21, 1)
-    plot_histogram(datasets, 'res/hists_with_zeros.png', 
-                    'res/stats_with_zeros.csv', True,
-                    bins_prepro_0, bins_raw_0)
-    plot_histogram(datasets, 'res/hists_without_zeros.png', 
-                    'res/stats_without_zeros.csv', False,
-                    bins_prepro, bins_raw)
-    get_obs_info(datasets, 'res/info_table.csv')
+    # # Generate histograms
+    # bins_prepro_0 = np.arange(0, 10.5, 0.5)
+    # bins_raw_0 = np.arange(0, 11, 1)
+    # bins_prepro = np.arange(0, 20.5, 0.5)
+    # bins_raw = np.arange(0, 21, 1)
+    # plot_histogram(datasets, 'res/hists_with_zeros.png', 
+    #                 'res/stats_with_zeros.csv', True,
+    #                 bins_prepro_0, bins_raw_0)
+    # plot_histogram(datasets, 'res/hists_without_zeros.png', 
+    #                 'res/stats_without_zeros.csv', False,
+    #                 bins_prepro, bins_raw)
+    # get_obs_info(datasets, 'res/info_table.csv')
 
     # Generate latent spaces on the test dataset for each model
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -259,12 +264,15 @@ if __name__ == '__main__':
     for model in models:
         vae = torch.load(model)
         vae.eval()
-        batch_size = int(model.split('bs')[1].split('_')[0])
-        sample = float(model.split('s')[1].split('_')[0])
-        ldim = model.encoder.encoder.linear3.out_features
-        dataloader = create_dataloader(datasets['test dataset'], batch_size, sample, device)
+        batch_size = int(model.split('_bs')[1].split('_')[0])
+        sample = float(model.split('_s')[1].split('_')[0])
+        ldim = vae.encoder.encoder.linear3.out_features
+        model = model.split('.')[:-1]
+        model = '.'.join(model)
+        dataloader = create_dataloader(datasets_paths['test dataset'], batch_size, sample, 
+                                        transform=torch.from_numpy)
         elbo, Dkl, recon_loss, z = test(vae, dataloader, True, device)
         pca_res = plot_PCA_latent_space(z, model, ldim, color_dict)
-        stats = [elbo, Dkl, recon_loss, pca_res]
+        stats = [[float(elbo.cpu()), float(Dkl.cpu()), float(recon_loss.cpu()), pca_res]]
         stats = pd.DataFrame(stats, columns=['-ELBO', 'Dkl', 'Recon', 'PCA'])
         stats.to_csv(model+'_stats.csv', index=False)
