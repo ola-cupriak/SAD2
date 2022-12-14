@@ -1,0 +1,5 @@
+,min,max,mean,median
+preprocessed train data,0.0,21078940.0,3.42741,0.0
+raw train data,0.0,35451.0,0.4421075,0.0
+preprocessed test data,0.0,21078940.0,3.657701,0.0
+raw test data,0.0,35451.0,0.44727832,0.0

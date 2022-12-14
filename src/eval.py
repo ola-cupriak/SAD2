@@ -35,6 +35,7 @@ def read_cmd() -> tuple:
     parser.add_argument('-m', '--models', 
                         help='list of models to be evaluated',
                         type=str, nargs='+', required=True)
+    args = parser.parse_args()
     train_set = args.train_dataset
     test_set = args.test_dataset
     models = args.models
@@ -174,9 +175,9 @@ def get_obs_info(data_dict: dict, output: str):
 
 def get_color_dict(path: str, feature_name: str,
                     colors = ['black', 'darkgray', 'rosybrown', 
-                            'lightcoral', 'darkred', 'red', 'tan', 
-                            'lightsalmon', 'sienna', 'sandybrown', 
-                            'peru', 'darkorange', 'gold', 'olive',
+                            'lightcoral', 'darkred', 'red', 'deeppink', 
+                            'lightsalmon', 'darkorange', 'sandybrown', 
+                            'peru', 'gold', 'sienna', 'olive',
                             'darkkhaki', 'yellow', 'forestgreen', 
                             'greenyellow', 'lightgreen', 'lime', 
                             'turquoise', 'teal', 'aqua', 'blue', 
@@ -185,7 +186,7 @@ def get_color_dict(path: str, feature_name: str,
                             'slateblue', 'mediumpurple', 'fuchsia',
                             'rebeccapurple', 'indigo', 'darkviolet',
                             'mediumorchid', 'plum' , 'lightgray', 
-                            'mediumvioletred', 'deeppink', 'hotpink',
+                            'mediumvioletred', 'tan', 'hotpink',
                             'palevioletred', 'lightpink', 'purple']):
     
     if feature_name not in ['cell_type', 'batch', 'DonorID', 'Site']:
@@ -195,6 +196,7 @@ def get_color_dict(path: str, feature_name: str,
 
     df = sc.read_h5ad(path)
     feature = list(np.unique(df.obs[feature_name]))
+    feature = [str(i) for i in feature]
     color_dict = {key: color for key, color in zip(feature, colors)}
     return color_dict
 
@@ -230,8 +232,6 @@ def plot_PCA_latent_space(z, path: str, ldim: int,
 
     fig, ax = plt.subplots(figsize=(10,10))
     for g in np.unique(group):
-        if feature_name == 'DonorID':
-            g = int(g)
         ix = np.where(group == g)[0].tolist()
         ax.scatter(pca_res['S1'][ix],  pca_res['S2'][ix], 
                     c = colors[g],  label = g, s = 10, alpha=0.7)
@@ -241,6 +241,7 @@ def plot_PCA_latent_space(z, path: str, ldim: int,
         ax.legend()
     ax.set_title(f'PCA results for ldim={ldim} by {feature_name}')
     plt.savefig(path+f'_PCA_{feature_name}.png', bbox_inches='tight')
+    plt.close()
 
     exp_var_pca = pca.explained_variance_ratio_
     var = 0
@@ -256,25 +257,25 @@ def plot_PCA_latent_space(z, path: str, ldim: int,
 
 
 if __name__ == '__main__':
-    #datasets, models = read_cmd()
-    datasets_paths = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
-    models = ['res/vae_vanilla/vae_vanilla_s1.0_b1.0_lr0.0005_ld50_hd250_bs32_epo20.pt']
+    datasets_paths, models = read_cmd()
+    # datasets_paths = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
+    # models = ['res/vae_vanilla/vae_vanilla_s1.0_b1.0_lr0.0005_ld50_hd250_bs32_epo20.pt']
     datasets = {}
     datasets['train dataset'] = load_dataset(datasets_paths['train dataset'])
     datasets['test dataset'] = load_dataset(datasets_paths['test dataset'])
     create_shape_table(datasets, 'res/shape_table.csv')
-    # # Generate histograms
-    # bins_prepro_0 = np.arange(0, 10.5, 0.5)
-    # bins_raw_0 = np.arange(0, 11, 1)
-    # bins_prepro = np.arange(0, 20.5, 0.5)
-    # bins_raw = np.arange(0, 21, 1)
-    # plot_histogram(datasets, 'res/hists_with_zeros.png', 
-    #                 'res/stats_with_zeros.csv', True,
-    #                 bins_prepro_0, bins_raw_0)
-    # plot_histogram(datasets, 'res/hists_without_zeros.png', 
-    #                 'res/stats_without_zeros.csv', False,
-    #                 bins_prepro, bins_raw)
-    # get_obs_info(datasets, 'res/info_table.csv')
+    # Generate histograms
+    bins_prepro_0 = np.arange(0, 10.5, 0.5)
+    bins_raw_0 = np.arange(0, 11, 1)
+    bins_prepro = np.arange(0, 20.5, 0.5)
+    bins_raw = np.arange(0, 21, 1)
+    plot_histogram(datasets, 'res/hists_with_zeros.png', 
+                    'res/stats_with_zeros.csv', True,
+                    bins_prepro_0, bins_raw_0)
+    plot_histogram(datasets, 'res/hists_without_zeros.png', 
+                    'res/stats_without_zeros.csv', False,
+                    bins_prepro, bins_raw)
+    get_obs_info(datasets, 'res/info_table.csv')
 
     # Generate latent spaces on the test dataset for each model
     device = "cuda" if torch.cuda.is_available() else "cpu"
