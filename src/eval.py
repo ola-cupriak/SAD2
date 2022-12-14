@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+'''Script to generate results'''
+
 import anndata
 import argparse
 import matplotlib.pyplot as plt
@@ -10,12 +13,12 @@ import sys
 import os
 import torch
 from utils import create_dataloader, test
-from VAE_custom_exp import VariationalAutoencoder_custom
-from VAE_custom_exp import EncoderNN_custom, DecoderNN_custom
-from VAE_custom_exp import EncoderGaussian_custom, DecoderGaussian_custom
-from VAE_Vanilla import VariationalAutoencoder
-from VAE_Vanilla import EncoderGaussian, DecoderGaussian
-from VAE_Vanilla import EncoderNN, DecoderNN
+from train_VAE_custom import VariationalAutoencoder_custom
+from train_VAE_custom import EncoderNN_custom, DecoderNN_custom
+from train_VAE_custom import EncoderGaussian_custom, DecoderGaussian_custom
+from train_VAE_Vanilla import VariationalAutoencoder
+from train_VAE_Vanilla import EncoderGaussian, DecoderGaussian
+from train_VAE_Vanilla import EncoderNN, DecoderNN
 
 
 
@@ -265,8 +268,8 @@ if __name__ == '__main__':
     datasets['test dataset'] = load_dataset(datasets_paths['test dataset'])
     create_shape_table(datasets, 'res/shape_table.csv')
     # Generate histograms
-    bins_prepro_0 = np.arange(0, 10.5, 0.5)
-    bins_raw_0 = np.arange(0, 11, 1)
+    bins_prepro_0 = np.arange(0, 20.5, 0.5)
+    bins_raw_0 = np.arange(0, 21, 1)
     bins_prepro = np.arange(0, 20.5, 0.5)
     bins_raw = np.arange(0, 21, 1)
     plot_histogram(datasets, 'res/hists_with_zeros.png', 
@@ -297,12 +300,14 @@ if __name__ == '__main__':
                                         transform=torch.from_numpy)
         elbo, Dkl, recon, z = test(vae, dataloader, True, device)
         # Plot latent space for each feature
-        stats = [float(elbo.cpu()), float(Dkl.cpu()), float(recon.cpu())]
+        stats = [ldim, float(elbo.cpu()), 
+                float(Dkl.cpu()), float(recon.cpu())]
         for f in features:
             pca = plot_PCA_latent_space(z, model, ldim, color_dicts[f], f)
             stats.append(pca)
         stats = [stats]
-        stats = pd.DataFrame(stats, columns=['-ELBO', 'Dkl', 'Recon', 
-                                            'PCA_cell_type', 'PCA_batch', 
-                                            'PCA_DonorID', 'PCA_Site'])
+        stats = pd.DataFrame(stats, columns=['l_dim', '-ELBO', 'Dkl', 
+                                            'Recon', 'PCA_cell_type', 
+                                            'PCA_batch', 'PCA_DonorID', 
+                                            'PCA_Site'])
         stats.to_csv(model+f'_stats.csv', index=False)

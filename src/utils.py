@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+'''Script contains common functions for other scripts'''
+
 import anndata
 import argparse
 import numpy as np
