@@ -69,7 +69,7 @@ Options:
 
     > python3 src/train_VAE_custom.py -t data/SAD2022Z_Project1_GEX_train.h5ad -v data/SAD2022Z_Project1_GEX_test.h5ad -o res/custom_decoder/vae_exp -e 20 -bs 32 -ld 100 -hd 250 -lr 8e-3 -b 1 -s 1
 
-    > python3 src/train_VAE_Vanilla.py -t data/SAD2022Z_Project1_GEX_train.h5ad -v data/SAD2022Z_Project1_GEX_test.h5ad -o res/vae_vanilla/vae_vanilla -e 20 -bs 32 -ld 100 -hd 250 -lr 5e-4 -b 1 -s 1
+    > python3 src/train_VAE_Vanilla.py -t data/SAD2022Z_Project1_GEX_train.h5ad -v data/SAD2022Z_Project1_GEX_test.h5ad -o res/vae_vanilla/vae_vanilla -e 20 -bs 32 -ld 100 -hd 250 -lr 5e-4 -b 1 -s 1 
 
 
 
