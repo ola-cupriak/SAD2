@@ -3,20 +3,10 @@
 ## Contents ##
   * [General Description](#general-description)
   * [Requirments](#requirments)
-  * [Installation](#installation)
   * [General Information](#general-information)
-  * [Usage](#usage)
-  * [Configuration File](#configuration-file)
-  * [Not Allowed Options](#not-allowed-options)
-  * [Project Structure](#project-structure)
+  * [Usage-eval.py](#usage-eval.py)
+  * [Usage-train_model_name.py](#usage-train_model_name.py)
   * [Examples](#examples)
-  * [MODULE 2](#module-2)
-    - [General Description Module 2](#general-description-module-2)
-    - [Requirments Module 2](requirments-module-2)
-    - [Installation Module 2](#installation-module-2)
-    - [Usage Module 2](#usage-module-2)
-    - [Input File Module 2](#input-file-module-2)
-    - [Examples Module 2](#examples-module-2)
 
 ## General Description ##
 A project to implement a Variational autoencoder (VAE) for data from the scRNA-seq experiment.
@@ -35,7 +25,7 @@ Enables latent space analysis using PCA.
 4. The res directory is necessary to save files (models, graphs and tables).
 5. Train and test datasets are available here: https://drive.google.com/drive/folders/1yG4o9K38HWmw_7aHbfe-Gkq9XtuH-KMf
 
-## Usage - eval.py##
+## Usage-eval.py##
 Usage:
 
     % python3 eval.py [options]
@@ -46,7 +36,7 @@ Options:
     -v [ --test_dataset ] arg       specify path to test dataset (required)
     -m [ --models ] arg             specify paths to trained models (at least one, may be several separated by a space) (required)
 
-## Usage - train_[model_name].py##
+## Usage-train_model_name.py##
 Usage:
 
     % python3 train_[model_name].py [options]
@@ -70,6 +60,3 @@ Options:
     > python3 src/train_VAE_custom.py -t data/SAD2022Z_Project1_GEX_train.h5ad -v data/SAD2022Z_Project1_GEX_test.h5ad -o res/custom_decoder/vae_exp -e 20 -bs 32 -ld 100 -hd 250 -lr 8e-3 -b 1 -s 1
 
     > python3 src/train_VAE_Vanilla.py -t data/SAD2022Z_Project1_GEX_train.h5ad -v data/SAD2022Z_Project1_GEX_test.h5ad -o res/vae_vanilla/vae_vanilla -e 20 -bs 32 -ld 100 -hd 250 -lr 5e-4 -b 1 -s 1 
-
-
-
