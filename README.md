@@ -25,7 +25,7 @@ Enables latent space analysis using PCA.
 4. The res directory is necessary to save files (models, graphs and tables).
 5. Train and test datasets are available here: https://drive.google.com/drive/folders/1yG4o9K38HWmw_7aHbfe-Gkq9XtuH-KMf
 
-## Usage-eval.py##
+## Usage-eval.py ##
 Usage:
 
     % python3 eval.py [options]
@@ -36,7 +36,7 @@ Options:
     -v [ --test_dataset ] arg       specify path to test dataset (required)
     -m [ --models ] arg             specify paths to trained models (at least one, may be several separated by a space) (required)
 
-## Usage-train_model_name.py##
+## Usage-train_model_name.py ##
 Usage:
 
     % python3 train_[model_name].py [options]
