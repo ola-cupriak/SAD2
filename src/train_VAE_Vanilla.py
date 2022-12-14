@@ -171,7 +171,7 @@ def run_VAE_training(train_data: str, test_data: str,
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using {device} device")
 
-    for i,_ in train_dataloader:
+    for i,_,_,_,_ in train_dataloader:
         n_cols = i.shape[1]
         break
     if ldim > n_cols:
