@@ -19,6 +19,11 @@ from train_VAE_custom import EncoderGaussian_custom, DecoderGaussian_custom
 from train_VAE_Vanilla import VariationalAutoencoder
 from train_VAE_Vanilla import EncoderGaussian, DecoderGaussian
 from train_VAE_Vanilla import EncoderNN, DecoderNN
+from train_VAE_custom_extended import VariationalAutoencoder_custom_ext
+from train_VAE_custom_extended import EncoderNN_custom_ext, DecoderNN_custom_ext
+from train_VAE_custom_extended import EncoderGaussian_custom_ext
+from train_VAE_custom_extended import DecoderGaussian_custom_ext
+from train_VAE_custom_extended import test_ext
 
 
 
@@ -254,15 +259,11 @@ def plot_PCA_latent_space(z, path: str, ldim: int,
         if var>0.95:
             break
         var += e
-
-    
     return i
 
 
 if __name__ == '__main__':
     datasets_paths, models = read_cmd()
-    # datasets_paths = {'train dataset': 'data/SAD2022Z_Project1_GEX_train.h5ad', 'test dataset': 'data/SAD2022Z_Project1_GEX_test.h5ad'}
-    # models = ['res/vae_vanilla/vae_vanilla_s1.0_b1.0_lr0.0005_ld50_hd250_bs32_epo20.pt']
     datasets = {}
     datasets['train dataset'] = load_dataset(datasets_paths['train dataset'])
     datasets['test dataset'] = load_dataset(datasets_paths['test dataset'])
@@ -291,14 +292,20 @@ if __name__ == '__main__':
         vae.eval()
         batch_size = int(model.split('_bs')[1].split('_')[0])
         sample = float(model.split('_s')[1].split('_')[0])
-        ldim = vae.encoder.encoder.linear3.out_features
+        ldim = vae.decoder.decoder.linear1.in_features
+        if '_ext' in model:
+            ext = True
+        else:
+            ext = False
         model = model.split('.')[:-1]
         model = '.'.join(model)
-        print(model)
         dataloader = create_dataloader(datasets_paths['test dataset'], 
                                         batch_size, sample, 
                                         transform=torch.from_numpy)
-        elbo, Dkl, recon, z = test(vae, dataloader, True, device)
+        if ext:
+            elbo, Dkl, recon, z = test_ext(vae, dataloader, True, device)
+        else:
+            elbo, Dkl, recon, z = test(vae, dataloader, True, device)
         # Plot latent space for each feature
         stats = [ldim, float(elbo.cpu()), 
                 float(Dkl.cpu()), float(recon.cpu())]

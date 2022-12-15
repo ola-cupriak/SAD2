@@ -165,7 +165,8 @@ class scRNADataset(Dataset):
         l_cells = round(len(self.data) * sample)
         self.data = self.data[:l_cells]
         self.data = self.data/np.max(self.data)
-        self.transform = transform
+        self.transform = transform   
+
 
     def __len__(self):
         return len(self.data)
@@ -178,16 +179,16 @@ class scRNADataset(Dataset):
         single_batch = self.batch[idx]
         single_DonorID = self.DonorID[idx]
         single_Site = self.Site[idx]
-
+    
         if self.transform:
             single_cell = self.transform(single_cell)
     
+        return (single_cell, single_cell_type, 
+                single_batch, single_DonorID, single_Site)
 
-        return single_cell, single_cell_type, single_batch, single_DonorID, single_Site
 
-
-def create_dataloader(file: str, batch_size: int,
-                    sample: float, transform=None) -> dict:
+def create_dataloader(file: str, batch_size: int, sample: float, 
+                        transform=None) -> dict:
     """
     Creates dataloader for passed datasets and returns it.
     """
